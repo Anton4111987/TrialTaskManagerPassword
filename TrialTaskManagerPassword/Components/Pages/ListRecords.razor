@@ -1,0 +1,168 @@
+﻿@using TrialTaskManagerPassword.Data
+@using TrialTaskManagerPassword.Models
+@using Blazored.Modal
+@using Blazored.Modal.Services
+@inject IRecordRepository _listRecords
+
+@inject NavigationManager navigationManager;
+@inject IModalService Modal
+@page "/listRecords"
+
+@rendermode InteractiveServer
+
+<PageTitle>listRecords</PageTitle>
+
+@if (confirmation)
+{
+    <div class="model" tabindex="-1" style="position:absolute;   display:inline-block">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Модальное окно добавления записи </h5>
+                    <button type="button" class="btn btn-close" data-dismiss="modal" aria-label="Close" @onclick=CloseDialog></button>
+                </div>
+                <EditForm Model="_newRecord" OnValidSubmit="Add">
+                    <DataAnnotationsValidator />
+                    <ValidationSummary />
+                    <div class="modal-body">
+                        Нименование:
+                        <input type="text" placeholder="Введите наименование" @bind="_newRecord.Source" />
+                        <br />
+                        <br />
+                        Пароль:
+                        <input type="password" placeholder="Введите пароль" @bind="_newRecord.Password" />
+                        <br />
+                        <br />
+                        <InputRadioGroup @bind-Value="_newRecord.IsEmail">
+                            Сайт или Email: <br />
+                            @foreach (var s in source)
+                            {
+                                <input type="radio" name="sourceIsEmail" value="@s" checked="@(s=="Site")" /> @s <br />
+                            }
+                        </InputRadioGroup>
+                    </div>
+                    <div>
+                        <button type="button" class="btn btn-danger" data-bs-dismiss="modal" @onclick=CloseDialog>Cancel</button>
+                        <button type="submit" class="btn btn-success" @onclick="(async ()=>await SaveRecordAsync())">Save</button>
+                    </div>
+                    <div style="color:red">@error</div>
+                    <div>@_newRecord.IsEmail</div>
+                </EditForm>
+            </div>
+        </div>
+        
+    </div>
+    
+}
+
+<h1>listRecords</h1>
+    <div>
+        <InputText @bind-Value=@searchName placeholder="поиск по наименованию" />
+        <button @onclick="(()=>Search(searchName))">Найти</button>
+    </div>
+    <br />
+    <br />
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Наименование страницы или email</th>
+                <th>Пароль</th>
+                <th>Отображение пароля</th>
+                <th>Дата записи</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (Record record in records)
+            {
+                <tr>
+                    <td> @record.Source</td>
+                    @if (flag && recordId==record.Id)
+                    {
+                        <td> @record.Password</td>
+                        <td>
+                            <button @onclick="(()=>ShowPassword(record))">Скрыть пароль</button>
+                        </td>
+                    }
+                    else
+                    {
+                        <td>@passwordHidden</td>
+                        <td>
+                            <button @onclick="(()=>ShowPassword(record))">Показать пароль</button>
+                        </td>
+                    }
+                    <td> @record.RecordingDate</td>
+                </tr>
+            }
+        </tbody>
+    </table>
+
+
+<button @onclick="Add" class="btn btn-success">Добавить новую запись</button>
+
+
+
+@code {
+    private IEnumerable<Record> records = new List<Record>();
+    private string? passwordHidden = "*******";
+    private bool flag = false;
+    private string? searchName;
+    private int? recordId;
+    private Record _newRecord = new();
+    private bool confirmation = false;
+    private List<string> source = new List<string> { "Site", "Email" };
+    private string? error;
+    private bool radio;
+    protected override async Task OnInitializedAsync()
+    {
+        records =await _listRecords.GetRecords();
+        records = records.OrderByDescending(r => r.RecordingDate);
+
+    }
+
+    private void ShowPassword(Record record)
+    {
+        flag = !flag;
+        recordId = record.Id;
+    }
+
+    private async Task Search(string searchName)
+    {
+        if (searchName == null || searchName=="")
+        {
+            records = await _listRecords.GetRecords();
+        }        
+        else
+        {
+            records = records.Where(r => r.Source.Contains(searchName));
+        }
+    }
+    private void Add()
+    {
+        confirmation = true;
+    }
+
+    private void CloseDialog()
+    {
+        confirmation = false;
+    }
+    private async Task SaveRecordAsync()
+    {
+        if (_newRecord.Source == null || _newRecord.Source == "" || _newRecord.Password == null || _newRecord.Password == "" || _newRecord.Password.Length<8)
+            error="Ошибка";
+        else
+        {
+            error = "";
+            await _listRecords.AddRecord(
+            new Record
+                {
+                    Source = _newRecord.Source,
+                    Password = _newRecord.Password,
+                    RecordingDate = DateTime.Now
+                });
+            confirmation = false;
+            navigationManager.NavigateTo("/ListRecords", true);
+        }
+        
+    }
+    
+}
