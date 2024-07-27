@@ -7,16 +7,16 @@ namespace TrialTaskManagerPassword.Models
         public int Id { get; set; }
 
         /// <summary>
-        /// Сайт или email
+        /// Ресурс (Сайт или email)
         /// </summary>
 
-        public bool IsEmail {  get; set; }
+        public string? Source {  get; set; }
 
         /// <summary>
-        /// Ресурс Email адрес или сайт
+        /// Полный адресс Email или сайт
         /// </summary>
-       [Required(ErrorMessage = "Строка Source(наименования)  не может быть пуста")]
-        public string? Source {  get; set; }
+       [Required(ErrorMessage = "Строка AddressSource(наименования)  не может быть пуста")]
+        public string? AddressSource {  get; set; }
         
         /// <summary>
         /// Пароль

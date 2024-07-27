@@ -26,18 +26,18 @@
                     <ValidationSummary />
                     <div class="modal-body">
                         Нименование:
-                        <input type="text" placeholder="Введите наименование" @bind="_newRecord.Source" />
+                        <input type="text" placeholder="Введите наименование" @bind="_newRecord.AddressSource" />
                         <br />
                         <br />
                         Пароль:
                         <input type="password" placeholder="Введите пароль" @bind="_newRecord.Password" />
                         <br />
                         <br />
-                        <InputRadioGroup @bind-Value="_newRecord.IsEmail">
+                        <InputRadioGroup @bind-Value="_newRecord.Source">
                             Сайт или Email: <br />
-                            @foreach (var s in source)
+                            @foreach (var source in sources)
                             {
-                                <input type="radio" name="sourceIsEmail" value="@s" checked="@(s=="Site")" /> @s <br />
+                                <InputRadio Value="@source" checked="@(source=="Site")" /> @source <br />
                             }
                         </InputRadioGroup>
                     </div>
@@ -46,11 +46,10 @@
                         <button type="submit" class="btn btn-success" @onclick="(async ()=>await SaveRecordAsync())">Save</button>
                     </div>
                     <div style="color:red">@error</div>
-                    <div>@_newRecord.IsEmail</div>
+                    <p>Source: @_newRecord.Source</p>
                 </EditForm>
             </div>
         </div>
-        
     </div>
     
 }
@@ -62,10 +61,13 @@
     </div>
     <br />
     <br />
+<button @onclick="Add" class="btn btn-success">Добавить новую запись</button>
+<br />
     <table class="table">
         <thead>
             <tr>
-                <th>Наименование страницы или email</th>
+                <th>Cтраница или email</th>
+                <th>Адресс страницы или email</th>
                 <th>Пароль</th>
                 <th>Отображение пароля</th>
                 <th>Дата записи</th>
@@ -76,6 +78,7 @@
             {
                 <tr>
                     <td> @record.Source</td>
+                    <td> @record.AddressSource</td>
                     @if (flag && recordId==record.Id)
                     {
                         <td> @record.Password</td>
@@ -97,7 +100,7 @@
     </table>
 
 
-<button @onclick="Add" class="btn btn-success">Добавить новую запись</button>
+
 
 
 
@@ -109,14 +112,13 @@
     private int? recordId;
     private Record _newRecord = new();
     private bool confirmation = false;
-    private List<string> source = new List<string> { "Site", "Email" };
+    private List<string> sources = new List<string> { "Site", "Email" };
     private string? error;
     private bool radio;
     protected override async Task OnInitializedAsync()
     {
         records =await _listRecords.GetRecords();
         records = records.OrderByDescending(r => r.RecordingDate);
-
     }
 
     private void ShowPassword(Record record)
@@ -147,22 +149,35 @@
     }
     private async Task SaveRecordAsync()
     {
-        if (_newRecord.Source == null || _newRecord.Source == "" || _newRecord.Password == null || _newRecord.Password == "" || _newRecord.Password.Length<8)
+        if (_newRecord.AddressSource == null || _newRecord.AddressSource == "" || _newRecord.Password == null || _newRecord.Password == "" || _newRecord.Password.Length < 8)
             error="Ошибка";
         else
         {
-            error = "";
-            await _listRecords.AddRecord(
-            new Record
+            if (_newRecord.Source == "Email")
+            {
+                if (_newRecord.AddressSource.Contains('@'))
                 {
-                    Source = _newRecord.Source,
-                    Password = _newRecord.Password,
-                    RecordingDate = DateTime.Now
-                });
-            confirmation = false;
-            navigationManager.NavigateTo("/ListRecords", true);
+                    await AddRecordAsync();
+                    error = "";
+                }
+                else
+                {
+                    error = "Ошибка ввода email";
+                }
+            }
         }
-        
     }
-    
+    private async Task AddRecordAsync()
+    {
+        await _listRecords.AddRecord(
+        new Record
+            {
+                Source = _newRecord.Source,
+                AddressSource=_newRecord.AddressSource,
+                Password = _newRecord.Password,
+                RecordingDate = DateTime.Now
+            });
+        confirmation = false;
+        navigationManager.NavigateTo("/ListRecords", true);
+    }
 }
